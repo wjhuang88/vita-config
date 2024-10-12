@@ -1,0 +1,31 @@
+kind: datasource
+name: sqlite_01
+spec:
+  driver: sqlite
+  path: ":memory:"
+  init-sql: |
+    -- 建表
+    DROP TABLE if EXISTS t_test_01;
+    CREATE TABLE t_test_01 (
+        ID INTEGER NOT NULL,
+        F_NAME TEXT,
+        F_UNIT_PRICE REAL,
+        F_COUNT INTEGER,
+        F_CREATE_TIME DATETIME,
+        PRIMARY KEY (ID)
+    );
+    -- 插入数据
+    INSERT INTO t_test_01 VALUES (1, 'Goods_01', 3.2, 3000, CURRENT_TIMESTAMP);
+    INSERT INTO t_test_01 VALUES (2, 'Goods_02', 4.5, 2000, CURRENT_TIMESTAMP);
+    INSERT INTO t_test_01 VALUES (3, 'Goods_03', 1.5, 6000, CURRENT_TIMESTAMP);
+    INSERT INTO t_test_01 VALUES (4, 'Goods_04', 5.7, 2000, CURRENT_TIMESTAMP);
+  query:
+    - name: get_all
+      sql: |
+        SELECT * FROM t_test_01
+    - name: get_part
+      sql: |
+        SELECT * FROM t_test_01 WHERE F_COUNT > ?
+      params:
+        - name: count
+          type: int

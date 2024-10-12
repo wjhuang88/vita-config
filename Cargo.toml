@@ -1,0 +1,10 @@
+[package]
+name = "vita"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0.210", features = ["derive"] }
+serde_yml = "0.0.12"
+sqlite = "0.36.1"
+thiserror = "1.0.64"

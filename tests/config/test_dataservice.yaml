@@ -1,0 +1,21 @@
+kind: dataservice
+name: test-data-service
+service:
+  path: /test
+  version: 1
+  transport:
+    protocol: http
+    style: restful
+    readonly: false
+spec:
+  datasource: sqlite_01
+  table: t_test_01
+  field:
+    id: ID
+    name: F_NAME
+    unitPrice: F_UNIT_PRICE
+    count: F_COUNT
+    createTime: F_CREATE_TIME
+  computed:
+    price: unitPrice * count
+    
