@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use super::config_structs::Spec;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct DataServiceSpec {
@@ -14,12 +14,11 @@ impl Spec for DataServiceSpec {}
 
 #[cfg(test)]
 mod tests {
+    use super::DataServiceSpec;
     use std::fs::File;
     use std::path::PathBuf;
-    use super::DataServiceSpec;
 
     use crate::config::load;
-
 
     #[test]
     fn test_load_dataservice() {
