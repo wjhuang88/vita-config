@@ -1,37 +1,13 @@
-use super::config_structs::Spec;
+use super::config_structs::{QueryParam, Spec};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct DataSourceSpec {
     pub(crate) driver: DataSourceDriver,
     pub(crate) path: String,
-    #[serde(rename = "init-sql")]
-    pub(crate) init_sql: Option<String>,
-    pub(crate) query: Option<Vec<QueryInstant>>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct QueryInstant {
-    pub(crate) name: String,
-    pub(crate) sql: String,
-    pub(crate) params: Option<Vec<QueryParam>>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct QueryParam {
-    pub(crate) name: String,
-    #[serde(rename = "type")]
-    pub(crate) p_type: ParamType,
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub(crate) enum ParamType {
-    #[serde(rename = "float")]
-    Float,
-    #[serde(rename = "int")]
-    Integer,
-    #[serde(rename = "string")]
-    String,
+    #[serde(rename = "init-script")]
+    pub(crate) init_script: Option<String>,
+    pub(crate) params: Vec<QueryParam>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -49,11 +25,10 @@ mod tests {
     use std::path::PathBuf;
 
     use super::DataSourceDriver;
-    use crate::config::datasource_spec::ParamType;
-    use crate::config::load;
+    use crate::config::{load, ParamType};
 
     #[test]
-    fn test_load_dataservice() {
+    fn test_load_datasource() {
         let conf_path = PathBuf::from("tests/config/test_datasource.yaml");
         let config = load(File::open(conf_path).unwrap()).unwrap();
 
@@ -62,21 +37,13 @@ mod tests {
         assert_eq!(DataSourceDriver::Sqlite, spec.driver);
         assert_eq!(":memory:", spec.path);
 
-        let query_list = spec.query.unwrap();
+        let param_list = spec.params;
+        let param_instant_1 = &param_list[0];
+        assert_eq!("ID", param_instant_1.name);
+        assert_eq!(ParamType::Integer, param_instant_1.p_type);
 
-        let query_instant = &query_list[0];
-        assert_eq!("get_all", query_instant.name);
-        assert_eq!("SELECT * FROM t_test_01\n", query_instant.sql);
-        assert!(query_instant.params.is_none());
-
-        let query_instant = &query_list[1];
-        assert_eq!("get_part", query_instant.name);
-        assert_eq!(
-            "SELECT * FROM t_test_01 WHERE F_COUNT > ?\n",
-            query_instant.sql
-        );
-        let param_instant = &query_instant.params.as_ref().unwrap()[0];
-        assert_eq!("count", param_instant.name);
-        assert_eq!(ParamType::Integer, param_instant.p_type);
+        let param_instant_2 = &param_list[1];
+        assert_eq!("F_NAME", param_instant_2.name);
+        assert_eq!(ParamType::String, param_instant_2.p_type);
     }
 }

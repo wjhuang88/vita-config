@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::collections::HashMap;
 
 use crate::errors::Result;
@@ -10,16 +10,33 @@ pub trait DataSource {
     where
         S: AsRef<str>;
 
-    fn query<S>(&self, statement: S, params: &[Value]) -> Result<Vec<HashMap<String, Value>>>
+    fn query<S, P>(&self, statement: S, params: P) -> Result<Vec<HashMap<String, Value>>>
     where
-        S: AsRef<str>;
+        S: AsRef<str>,
+        P: AsRef<[Value]>;
 
-    fn raw_query<S>(&self, statement: S) -> Result<Vec<HashMap<String, Value>>>
-    where
-        S: AsRef<str>;
+    fn insert(&self, table: impl AsRef<str>, item: impl AsRef<[(String, Value)]>) -> Result<usize>;
+
+    fn update(
+        &self,
+        table: impl AsRef<str>,
+        sets: impl AsRef<[(String, Value)]>,
+        conditions: impl AsRef<[FieldCondition]>,
+    ) -> Result<usize>;
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug)]
+pub enum FieldCondition {
+    Equal(String, Value),
+    NotEqual(String, Value),
+    GraterThan(String, Value),
+    LessThan(String, Value),
+    NotNull(String),
+    IsNull(String),
+    Between(String, Value, Value),
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub enum Value {
     /// Binary data.
     Binary(Vec<u8>),

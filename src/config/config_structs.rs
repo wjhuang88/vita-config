@@ -7,7 +7,7 @@ pub(crate) trait Spec {}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct Config {
-    pub(crate) kind: String,
+    pub(crate) kind: ConfigKind,
     pub(crate) name: String,
     pub(crate) service: Option<Service>,
     pub(crate) spec: Value,
@@ -22,9 +22,46 @@ pub(crate) struct Service {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct Transport {
-    pub(crate) protocol: String,
-    pub(crate) style: String,
+    pub(crate) protocol: Protocol,
+    pub(crate) style: ServiceStyle,
     pub(crate) readonly: bool,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub(crate) enum ConfigKind {
+    #[serde(rename = "dataservice")]
+    DataService,
+    #[serde(rename = "datasource")]
+    DataSource,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct QueryParam {
+    pub(crate) name: String,
+    #[serde(rename = "type")]
+    pub(crate) p_type: ParamType,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub(crate) enum ParamType {
+    #[serde(rename = "float")]
+    Float,
+    #[serde(rename = "int")]
+    Integer,
+    #[serde(rename = "string")]
+    String,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub(crate) enum ServiceStyle {
+    #[serde(rename = "restful")]
+    Restful,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub(crate) enum Protocol {
+    #[serde(rename = "http")]
+    Http,
 }
 
 impl Config {
@@ -32,8 +69,8 @@ impl Config {
         Ok(serde_yml::from_reader(reader)?)
     }
 
-    pub fn map_spec<S: Spec + DeserializeOwned>(&self) -> Result<S> {
-        Ok(serde_yml::from_value(self.spec.clone())?)
+    pub fn map_spec<S: Spec + DeserializeOwned>(self) -> Result<S> {
+        Ok(serde_yml::from_value(self.spec)?)
     }
 }
 
@@ -42,20 +79,22 @@ mod tests {
 
     use std::{fs::File, path::PathBuf};
 
+    use crate::config::config_structs::{ConfigKind, Protocol, ServiceStyle};
+
     #[test]
     fn test_load_config() {
         let conf_path = PathBuf::from("tests/config/test_dataservice.yaml");
         let config = super::Config::load(File::open(conf_path).unwrap()).unwrap();
         println!("Deserialized map: {:?}", config);
 
-        assert_eq!("dataservice", config.kind);
+        assert_eq!(ConfigKind::DataService, config.kind);
         assert_eq!("test-data-service", config.name);
 
         let service = config.service.unwrap();
         assert_eq!("/test", service.path);
         assert_eq!(1, service.version);
-        assert_eq!("http", service.transport.protocol);
-        assert_eq!("restful", service.transport.style);
+        assert_eq!(Protocol::Http, service.transport.protocol);
+        assert_eq!(ServiceStyle::Restful, service.transport.style);
         assert!(!service.transport.readonly);
     }
 }

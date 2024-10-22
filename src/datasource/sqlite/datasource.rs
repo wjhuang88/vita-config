@@ -1,8 +1,9 @@
-use sqlite::{BindableWithIndex, Connection};
+use sqlite::{BindableWithIndex, Connection, State};
 use std::collections::HashMap;
+use std::str::FromStr;
 
-use crate::datasource::def::{DataSource, Value};
-use crate::errors::Result;
+use crate::datasource::{DataSource, FieldCondition, Value};
+use crate::errors::{Error, Result};
 
 impl From<&sqlite::Value> for Value {
     fn from(val: &sqlite::Value) -> Self {
@@ -40,6 +41,12 @@ impl From<String> for Value {
     }
 }
 
+impl From<&str> for Value {
+    fn from(val: &str) -> Self {
+        Value::String(val.to_string())
+    }
+}
+
 impl BindableWithIndex for Value {
     fn bind<T: sqlite::ParameterIndex>(
         self,
@@ -74,15 +81,16 @@ impl DataSource for SqliteDataSource {
         Ok(self.connection.execute(statement)?)
     }
 
-    fn query<S>(&self, statement: S, params: &[Value]) -> Result<Vec<HashMap<String, Value>>>
+    fn query<S, P>(&self, statement: S, params: P) -> Result<Vec<HashMap<String, Value>>>
     where
         S: AsRef<str>,
+        P: AsRef<[Value]>,
     {
         let result = self
             .connection
             .prepare(statement)?
             .into_iter()
-            .bind(params)?;
+            .bind(params.as_ref())?;
         let column_names = result.column_names().to_vec();
         let vec: Vec<HashMap<String, Value>> = result
             .map(|row| {
@@ -99,24 +107,96 @@ impl DataSource for SqliteDataSource {
         Ok(vec)
     }
 
-    fn raw_query<S>(&self, statement: S) -> Result<Vec<HashMap<String, Value>>>
-    where
-        S: AsRef<str>,
-    {
-        let result = self.connection.prepare(statement)?.into_iter();
-        let column_names = result.column_names().to_vec();
-        let vec: Vec<HashMap<String, Value>> = result
-            .map(|row| {
-                let mut map: HashMap<String, Value> = HashMap::new();
-                if let Ok(row) = row {
-                    for name in &column_names {
-                        let value = &row[name.as_str()];
-                        map.insert(name.clone(), value.into());
-                    }
-                }
-                map
-            })
-            .collect();
-        Ok(vec)
+    fn insert(&self, table: impl AsRef<str>, item: impl AsRef<[(String, Value)]>) -> Result<usize> {
+        let mut names_part = String::new();
+        let mut values_part = String::new();
+        let mut values_list = Vec::new();
+        let mut first = true;
+        for (field, value) in item.as_ref() {
+            values_list.push(value.clone());
+            if !first {
+                names_part.push(',');
+                values_part.push(',');
+            }
+            names_part.push_str(field);
+            values_part.push('?');
+            first = false;
+        }
+        let sql = format!(
+            "INSERT INTO {} ({}) VALUES ({})",
+            table.as_ref(),
+            names_part,
+            values_part,
+        );
+        let mut st = self.connection.prepare(sql)?;
+        st.reset()?;
+        st.bind(values_list.as_slice())?;
+        if let State::Done = st.next()? {
+            return Ok(self.connection.change_count());
+        }
+        Err(Error::DB {
+            cause: String::from_str("insert failed")?,
+        })
+    }
+
+    fn update(
+        &self,
+        table: impl AsRef<str>,
+        sets: impl AsRef<[(String, Value)]>,
+        conditions: impl AsRef<[FieldCondition]>,
+    ) -> Result<usize> {
+        let mut set_part = String::new();
+        let mut condition_part = String::new();
+        let mut value_list = Vec::new();
+        let mut first = true;
+        for (field, value) in sets.as_ref() {
+            value_list.push(value.clone());
+            if !first {
+                set_part.push(',');
+            }
+            set_part.push_str(field);
+            set_part.push_str("=?");
+            first = false;
+        }
+
+        let mut first = true;
+        for condi in conditions.as_ref() {
+            let (field, mut values) = convert_condition(condi.clone());
+            value_list.append(&mut values);
+            if !first {
+                condition_part.push_str(" AND ");
+            }
+            condition_part.push_str(&field);
+            first = false;
+        }
+        let sql = format!(
+            "UPDATE {} SET {} WHERE {}",
+            table.as_ref(),
+            set_part,
+            condition_part
+        );
+        let mut st = self.connection.prepare(sql)?;
+        st.reset()?;
+        st.bind(value_list.as_slice())?;
+        if let State::Done = st.next()? {
+            return Ok(self.connection.change_count());
+        }
+        Err(Error::DB {
+            cause: String::from_str("update failed")?,
+        })
+    }
+}
+
+fn convert_condition(condition: FieldCondition) -> (String, Vec<Value>) {
+    match condition {
+        FieldCondition::Equal(field, value) => (format!("{} = ?", field), vec![value]),
+        FieldCondition::NotEqual(field, value) => (format!("{} != ?", field), vec![value]),
+        FieldCondition::GraterThan(field, value) => (format!("{} > ?", field), vec![value]),
+        FieldCondition::LessThan(field, value) => (format!("{} < ?", field), vec![value]),
+        FieldCondition::NotNull(field) => (format!("{} IS NOT NULL", field), vec![]),
+        FieldCondition::IsNull(field) => (format!("{} IS NULL", field), vec![]),
+        FieldCondition::Between(field, left, right) => {
+            (format!("{} BETWEEN ? AND ?", field), vec![left, right])
+        }
     }
 }
