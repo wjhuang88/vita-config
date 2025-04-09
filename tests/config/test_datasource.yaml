@@ -19,14 +19,3 @@ spec:
     INSERT INTO t_test_01 VALUES (2, 'Goods_02', 4.5, 2000, CURRENT_TIMESTAMP);
     INSERT INTO t_test_01 VALUES (3, 'Goods_03', 1.5, 6000, CURRENT_TIMESTAMP);
     INSERT INTO t_test_01 VALUES (4, 'Goods_04', 5.7, 2000, CURRENT_TIMESTAMP);
-  params:
-    - name: ID
-      type: int
-    - name: F_NAME
-      type: string
-    - name: F_UNIT_PRICE
-      type: float
-    - name: F_COUNT
-      type: int
-    - name: F_CREATE_TIME
-      type: string

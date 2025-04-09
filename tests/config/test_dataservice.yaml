@@ -11,11 +11,20 @@ spec:
   datasource: sqlite_01
   table: t_test_01
   field:
-    id: ID
-    name: F_NAME
-    unitPrice: F_UNIT_PRICE
-    count: F_COUNT
-    createTime: F_CREATE_TIME
+    id:
+      name: ID
+      type: int
+    name:
+      name: F_NAME
+      type: string
+    unitPrice:
+      name: F_UNIT_PRICE
+      type: float
+    count:
+      name: F_COUNT
+      type: int
+    createTime:
+      name: F_CREATE_TIME
+      type: string
   computed:
     price: unitPrice * count
-    

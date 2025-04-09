@@ -1,4 +1,4 @@
-use super::config_structs::{QueryParam, Spec};
+use super::config_structs::Spec;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -7,7 +7,6 @@ pub(crate) struct DataSourceSpec {
     pub(crate) path: String,
     #[serde(rename = "init-script")]
     pub(crate) init_script: Option<String>,
-    pub(crate) params: Vec<QueryParam>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -25,7 +24,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::DataSourceDriver;
-    use crate::config::{load, ParamType};
+    use crate::config::load;
 
     #[test]
     fn test_load_datasource() {
@@ -36,14 +35,5 @@ mod tests {
         println!("Deserialized map: {:?}", spec);
         assert_eq!(DataSourceDriver::Sqlite, spec.driver);
         assert_eq!(":memory:", spec.path);
-
-        let param_list = spec.params;
-        let param_instant_1 = &param_list[0];
-        assert_eq!("ID", param_instant_1.name);
-        assert_eq!(ParamType::Integer, param_instant_1.p_type);
-
-        let param_instant_2 = &param_list[1];
-        assert_eq!("F_NAME", param_instant_2.name);
-        assert_eq!(ParamType::String, param_instant_2.p_type);
     }
 }

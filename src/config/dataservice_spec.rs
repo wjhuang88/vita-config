@@ -1,4 +1,4 @@
-use super::config_structs::Spec;
+use super::config_structs::{QueryParam, Spec};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -6,7 +6,7 @@ use std::collections::HashMap;
 pub(crate) struct DataServiceSpec {
     pub(crate) datasource: String,
     pub(crate) table: String,
-    pub(crate) field: HashMap<String, String>,
+    pub(crate) field: HashMap<String, QueryParam>,
     pub(crate) computed: HashMap<String, String>,
 }
 
@@ -18,7 +18,7 @@ mod tests {
     use std::fs::File;
     use std::path::PathBuf;
 
-    use crate::config::load;
+    use crate::config::{load, ParamType};
 
     #[test]
     fn test_load_dataservice() {
@@ -30,11 +30,22 @@ mod tests {
 
         assert_eq!("sqlite_01", spec.datasource);
         assert_eq!("t_test_01", spec.table);
-        assert_eq!("ID", spec.field["id"]);
-        assert_eq!("F_NAME", spec.field["name"]);
-        assert_eq!("F_UNIT_PRICE", spec.field["unitPrice"]);
-        assert_eq!("F_COUNT", spec.field["count"]);
-        assert_eq!("F_CREATE_TIME", spec.field["createTime"]);
+
+        assert_eq!("ID", spec.field["id"].name);
+        assert_eq!(ParamType::Integer, spec.field["id"].p_type);
+
+        assert_eq!("F_NAME", spec.field["name"].name);
+        assert_eq!(ParamType::String, spec.field["name"].p_type);
+
+        assert_eq!("F_UNIT_PRICE", spec.field["unitPrice"].name);
+        assert_eq!(ParamType::Float, spec.field["unitPrice"].p_type);
+
+        assert_eq!("F_COUNT", spec.field["count"].name);
+        assert_eq!(ParamType::Integer, spec.field["count"].p_type);
+
+        assert_eq!("F_CREATE_TIME", spec.field["createTime"].name);
+        assert_eq!(ParamType::String, spec.field["createTime"].p_type);
+
         assert_eq!("unitPrice * count", spec.computed["price"]);
     }
 }
